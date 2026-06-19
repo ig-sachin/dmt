@@ -2,16 +2,25 @@ spring:
   application:
     name: dmt-backend
 
+  flyway:
+    enabled: false
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/dmt
-    username: sachinvishwakarma
-    password: sekiro
+    url: jdbc:oracle:thin:@localhost:1521/FREEPDB1
+    username: dmt
+    password: dmt12345
+    driver-class-name: oracle.jdbc.OracleDriver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
+
     show-sql: true
 
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+
 jwt:
-  secret: mySuperSecretKeyForDmtApplication123456789123456789
+  secret: mySuperSecretKeyForDmtApplication123456789
   expiration: 86400000

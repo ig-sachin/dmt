@@ -24,7 +24,7 @@ public class DmtScreen extends BaseEntity {
 
     private String description;
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
     private String selectQuery;
 
     private Integer defaultPageSize;

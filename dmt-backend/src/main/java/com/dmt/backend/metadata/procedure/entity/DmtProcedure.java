@@ -1,4 +1,4 @@
-package com.dmt.backend.metadata.filter.entity;
+package com.dmt.backend.metadata.procedure.entity;
 
 import com.dmt.backend.common.entity.BaseEntity;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
@@ -6,37 +6,24 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "dmt_filter")
+@Table(name = "dmt_procedure")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DmtFilter extends BaseEntity {
+public class DmtProcedure extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String filterName;
-
-    private String columnName;
-
     @Enumerated(EnumType.STRING)
-    private FilterType filterType;
+    private OperationType operationType;
 
-    private Boolean required;
+    private String procedureName;
 
-    private String defaultValue;
-
-    private Integer displayOrder;
-
-    private String fromColumn;
-
-    private String toColumn;
-
-    @Lob
-    private String dropdownQuery;
+    private Boolean active;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screen_id")

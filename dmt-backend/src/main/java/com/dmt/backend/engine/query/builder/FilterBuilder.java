@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@RequiredArgsConstructor
 @Component
+@RequiredArgsConstructor
 public class FilterBuilder {
 
     private final DmtFilterRepository filterRepository;
@@ -44,14 +44,29 @@ public class FilterBuilder {
 
                 case TEXT -> {
 
-                    where.append(" AND ")
+                    where.append(" AND UPPER(")
                             .append(column)
-                            .append(" ILIKE :")
-                            .append(column);
+                            .append(") LIKE UPPER(:")
+                            .append(column)
+                            .append(")");
 
                     params.addValue(
                             column,
                             "%" + value + "%"
+                    );
+                }
+
+                case NUMBER,
+                     BOOLEAN -> {
+
+                    where.append(" AND ")
+                            .append(column)
+                            .append(" = :")
+                            .append(column);
+
+                    params.addValue(
+                            column,
+                            value
                     );
                 }
 
@@ -73,7 +88,10 @@ public class FilterBuilder {
                                 .append(column);
                     }
 
-                    params.addValue(column, value);
+                    params.addValue(
+                            column,
+                            value
+                    );
                 }
 
                 case MULTI_SELECT -> {
@@ -92,17 +110,20 @@ public class FilterBuilder {
 
                 default ->
                         throw new RuntimeException(
-                                "Unsupported filter type");
+                                "Unsupported filter type: "
+                                        + filter.getFilterType());
             }
         });
 
         return where.toString();
     }
 
-    private Map<String, DmtFilter> getFilterMap(String screenCode) {
+    private Map<String, DmtFilter> getFilterMap(
+            String screenCode) {
 
         return filterRepository
-                .findByScreenScreenCodeOrderByDisplayOrderAsc(screenCode)
+                .findByScreenScreenCodeOrderByDisplayOrderAsc(
+                        screenCode)
                 .stream()
                 .collect(Collectors.toMap(
                         DmtFilter::getColumnName,

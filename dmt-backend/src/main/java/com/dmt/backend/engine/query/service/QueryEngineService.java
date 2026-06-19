@@ -4,10 +4,7 @@ import com.dmt.backend.engine.query.builder.FilterBuilder;
 import com.dmt.backend.engine.query.builder.SortBuilder;
 import com.dmt.backend.engine.query.dto.SearchRequest;
 import com.dmt.backend.engine.query.dto.SearchResponse;
-import com.dmt.backend.metadata.column.entity.DmtColumn;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
-import com.dmt.backend.metadata.filter.entity.DmtFilter;
-import com.dmt.backend.metadata.filter.repository.DmtFilterRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -73,10 +69,11 @@ public class QueryEngineService {
                         + sortColumn
                         + " "
                         + sortDirection
-                        + " LIMIT "
-                        + request.size()
                         + " OFFSET "
-                        + (request.page() * request.size());
+                        + (request.page() * request.size())
+                        + " ROWS FETCH NEXT "
+                        + request.size()
+                        + " ROWS ONLY";
 
         String countQuery =
                 "SELECT COUNT(*) FROM "
@@ -108,13 +105,11 @@ public class QueryEngineService {
         );
     }
 
-
-
     private void validateFilterColumns(
             String screenCode,
             Map<String, Object> filters) {
 
-        if (filters == null) {
+        if (filters == null || filters.isEmpty()) {
             return;
         }
 
@@ -131,8 +126,4 @@ public class QueryEngineService {
                                                     + column));
                 });
     }
-
-
-
-
 }
