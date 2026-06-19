@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: dmt-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dmt
+    username: sachinvishwakarma
+    password: sekiro
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  secret: mySuperSecretKeyForDmtApplication123456789123456789
+  expiration: 86400000
