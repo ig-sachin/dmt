@@ -11,9 +11,14 @@ spring:
     password: dmt12345
     driver-class-name: oracle.jdbc.OracleDriver
 
+  sql:
+    init:
+      mode: always
+
   jpa:
     hibernate:
       ddl-auto: create
+    defer-datasource-initialization: true
 
     show-sql: true
 
@@ -22,5 +27,5 @@ spring:
         dialect: org.hibernate.dialect.OracleDialect
 
 jwt:
-  secret: mySuperSecretKeyForDmtApplication123456789
+  secret: mySuperSecretKeyForDmtApplication123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789
   expiration: 86400000
