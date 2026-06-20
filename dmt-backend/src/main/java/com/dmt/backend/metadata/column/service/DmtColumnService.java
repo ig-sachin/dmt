@@ -7,12 +7,14 @@ import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DmtColumnService {
 
     private final DmtColumnRepository columnRepository;
@@ -20,9 +22,17 @@ public class DmtColumnService {
 
     public ColumnResponse create(ColumnRequest request) {
 
+        log.info(
+                "Create column requested screenId={} columnName={}",
+                request.screenId(),
+                request.columnName()
+        );
+
         DmtScreen screen = screenRepository.findById(request.screenId())
-                .orElseThrow(() ->
-                        new RuntimeException("Screen not found"));
+                .orElseThrow(() -> {
+                    log.warn("Create column failed screenId={} reason=screen_not_found", request.screenId());
+                    return new RuntimeException("Screen not found");
+                });
 
         DmtColumn column = DmtColumn.builder()
                 .screen(screen)
@@ -40,21 +50,36 @@ public class DmtColumnService {
                 .formatMask(request.formatMask())
                 .build();
 
-        return map(columnRepository.save(column));
+        DmtColumn saved = columnRepository.save(column);
+
+        log.info(
+                "Column created id={} screenId={} columnName={}",
+                saved.getId(),
+                request.screenId(),
+                request.columnName()
+        );
+
+        return map(saved);
     }
 
     public List<ColumnResponse> getByScreen(Long screenId) {
 
-        return columnRepository
+        List<ColumnResponse> columns = columnRepository
                 .findByScreenIdOrderByDisplayOrderAsc(screenId)
                 .stream()
                 .map(this::map)
                 .toList();
+
+        log.info("Columns fetched screenId={} count={}", screenId, columns.size());
+
+        return columns;
     }
 
     public void delete(Long id) {
 
         columnRepository.deleteById(id);
+
+        log.info("Column deleted id={}", id);
     }
 
     private ColumnResponse map(DmtColumn column) {

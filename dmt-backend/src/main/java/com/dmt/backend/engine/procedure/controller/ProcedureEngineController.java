@@ -17,9 +17,6 @@ public class ProcedureEngineController {
     public ProcedureExecutionResponse execute(
             @RequestBody ProcedureExecutionRequest request) {
 
-        System.out.println(
-                "REQUEST = " + request);
-
         return service.execute(request);
     }
 }

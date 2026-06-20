@@ -3,11 +3,11 @@ package com.dmt.backend.engine.procedure.service;
 import com.dmt.backend.engine.procedure.dto.ProcedureExecutionRequest;
 import com.dmt.backend.engine.procedure.dto.ProcedureExecutionResponse;
 import com.dmt.backend.metadata.procedure.entity.DmtProcedure;
-import com.dmt.backend.metadata.procedure.entity.OperationType;
 import com.dmt.backend.metadata.procedure.repository.DmtProcedureRepository;
 import com.dmt.backend.metadata.procedureparam.entity.DmtProcedureParam;
 import com.dmt.backend.metadata.procedureparam.repository.DmtProcedureParamRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProcedureEngineService {
 
     private final JdbcTemplate jdbcTemplate;
@@ -25,92 +26,90 @@ public class ProcedureEngineService {
 
     public ProcedureExecutionResponse execute(
             ProcedureExecutionRequest request) {
-        System.out.println(
-                "Requested Operation = "
-                        + request.operationType());
+
+        log.info(
+                "Procedure execution requested screenCode={} operationType={} valueKeys={}",
+                request.screenCode(),
+                request.operationType(),
+                request.values() == null ? null : request.values().keySet()
+        );
+
         DmtProcedure procedure =
                 procedureRepository
                         .findByScreenScreenCodeAndOperationTypeAndActiveTrue(
                                 request.screenCode(),
-                                OperationType.valueOf(String.valueOf(request.operationType())))
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Procedure not found"));
-        System.out.println(
-                "Resolved Procedure = "
-                        + procedure.getProcedureName());
+                                request.operationType())
+                        .orElseThrow(() -> {
+                            log.warn(
+                                    "Procedure not found screenCode={} operationType={}",
+                                    request.screenCode(),
+                                    request.operationType()
+                            );
+
+                            return new RuntimeException(
+                                    "Procedure not found");
+                        });
+
         List<DmtProcedureParam> params =
                 paramRepository
                         .findByProcedureIdOrderByParameterOrderAsc(
                                 procedure.getId());
-        System.out.println(
-                "Procedure ID = " + procedure.getId());
 
-        System.out.println(
-                "Param Count = " + params.size());
+        log.debug(
+                "Resolved procedure procedureName={} procedureId={} paramCount={}",
+                procedure.getProcedureName(),
+                procedure.getId(),
+                params.size()
+        );
 
-        params.forEach(p ->
-                System.out.println(
-                        p.getParameterName()
-                                + " -> "
-                                + p.getColumnName()));
         jdbcTemplate.execute((Connection connection) -> {
 
-            StringBuilder call =
-                    new StringBuilder("{call ");
+            String callSql = buildCallSql(
+                    procedure.getProcedureName(),
+                    params.size());
 
-            call.append(procedure.getProcedureName());
-
-            call.append("(");
-
-            for (int i = 0; i < params.size(); i++) {
-
-                call.append("?");
-
-                if (i < params.size() - 1) {
-                    call.append(",");
-                }
-            }
-
-            call.append(")}");
-
-            CallableStatement cs =
-                    connection.prepareCall(
-                            call.toString());
-
-            System.out.println("Executing Procedure = " + procedure.getProcedureName());
+            CallableStatement callableStatement =
+                    connection.prepareCall(callSql);
 
             int index = 1;
-            System.out.println(
-                    "Request Values = "
-                            + request.values());
 
-            params.forEach(p ->
-                    System.out.println(
-                            "Column Metadata = "
-                                    + p.getColumnName()));
             for (DmtProcedureParam param : params) {
 
                 Object value =
-                        request.values()
+                        request.values() == null
+                                ? null
+                                : request.values()
                                 .get(param.getColumnName());
 
                 if (value == null) {
-
-                    value =
-                            param.getDefaultValue();
+                    value = param.getDefaultValue();
                 }
 
-                System.out.println(
-                        "Binding "
-                                + param.getParameterName()
-                                + " = "
-                                + value);
+                if (Boolean.TRUE.equals(param.getRequired())
+                        && value == null) {
 
-                cs.setObject(index++, value);
+                    log.warn(
+                            "Procedure validation failed procedureName={} missingColumn={}",
+                            procedure.getProcedureName(),
+                            param.getColumnName()
+                    );
+
+                    throw new RuntimeException(
+                            "Missing required value for: "
+                                    + param.getColumnName());
+                }
+
+                callableStatement.setObject(index++, value);
             }
 
-            cs.execute();
+            callableStatement.execute();
+
+            log.info(
+                    "Procedure executed procedureName={} screenCode={} operationType={}",
+                    procedure.getProcedureName(),
+                    request.screenCode(),
+                    request.operationType()
+            );
 
             return null;
         });
@@ -118,5 +117,28 @@ public class ProcedureEngineService {
         return new ProcedureExecutionResponse(
                 true,
                 "Procedure executed successfully");
+    }
+
+    private String buildCallSql(
+            String procedureName,
+            int parameterCount) {
+
+        StringBuilder call =
+                new StringBuilder("{call ");
+
+        call.append(procedureName);
+        call.append("(");
+
+        for (int i = 0; i < parameterCount; i++) {
+            call.append("?");
+
+            if (i < parameterCount - 1) {
+                call.append(",");
+            }
+        }
+
+        call.append(")}");
+
+        return call.toString();
     }
 }

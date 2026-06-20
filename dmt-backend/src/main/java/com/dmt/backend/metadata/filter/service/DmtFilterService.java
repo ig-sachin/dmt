@@ -7,12 +7,14 @@ import com.dmt.backend.metadata.filter.repository.DmtFilterRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DmtFilterService {
 
     private final DmtFilterRepository filterRepository;
@@ -20,9 +22,18 @@ public class DmtFilterService {
 
     public FilterResponse create(FilterRequest request) {
 
+        log.info(
+                "Create filter requested screenId={} filterName={} columnName={}",
+                request.screenId(),
+                request.filterName(),
+                request.columnName()
+        );
+
         DmtScreen screen = screenRepository.findById(request.screenId())
-                .orElseThrow(() ->
-                        new RuntimeException("Screen not found"));
+                .orElseThrow(() -> {
+                    log.warn("Create filter failed screenId={} reason=screen_not_found", request.screenId());
+                    return new RuntimeException("Screen not found");
+                });
 
         DmtFilter filter = DmtFilter.builder()
                 .screen(screen)
@@ -35,21 +46,36 @@ public class DmtFilterService {
                 .dropdownQuery(request.dropdownQuery())
                 .build();
 
-        return map(filterRepository.save(filter));
+        DmtFilter saved = filterRepository.save(filter);
+
+        log.info(
+                "Filter created id={} screenId={} columnName={}",
+                saved.getId(),
+                request.screenId(),
+                request.columnName()
+        );
+
+        return map(saved);
     }
 
     public List<FilterResponse> getByScreen(Long screenId) {
 
-        return filterRepository
+        List<FilterResponse> filters = filterRepository
                 .findByScreenIdOrderByDisplayOrderAsc(screenId)
                 .stream()
                 .map(this::map)
                 .toList();
+
+        log.info("Filters fetched screenId={} count={}", screenId, filters.size());
+
+        return filters;
     }
 
     public void delete(Long id) {
 
         filterRepository.deleteById(id);
+
+        log.info("Filter deleted id={}", id);
     }
 
     private FilterResponse map(DmtFilter filter) {

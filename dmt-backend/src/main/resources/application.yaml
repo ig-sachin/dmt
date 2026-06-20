@@ -2,30 +2,53 @@ spring:
   application:
     name: dmt-backend
 
-  flyway:
-    enabled: false
-
   datasource:
-    url: jdbc:oracle:thin:@localhost:1521/FREEPDB1
-    username: dmt
-    password: dmt12345
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
 
   sql:
     init:
-      mode: always
+      mode: never
 
   jpa:
     hibernate:
-      ddl-auto: create
-    defer-datasource-initialization: true
-
-    show-sql: true
-
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.OracleDialect
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
 jwt:
-  secret: mySuperSecretKeyForDmtApplication123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789
-  expiration: 86400000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
+
+app:
+  bootstrap-admin:
+    enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+    username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:-no-request-id}] [%thread] %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.dmt.backend: INFO

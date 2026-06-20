@@ -4,6 +4,7 @@ import com.dmt.backend.auth.dto.AuthResponse;
 import com.dmt.backend.auth.dto.LoginRequest;
 import com.dmt.backend.auth.dto.RegisterRequest;
 import com.dmt.backend.auth.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,16 +16,12 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public String register(
-            @RequestBody RegisterRequest request) {
-
+    public String register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
     @PostMapping("/login")
-    public AuthResponse login(
-            @RequestBody LoginRequest request) {
-
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
 }

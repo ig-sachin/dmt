@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/FREEPDB1
+    username: dmt
+    password: dmt12345
+
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+
+  flyway:
+    enabled: false
+
+app:
+  bootstrap-admin:
+    enabled: true
+    username: sachin
+    password: sachin123
+
+jwt:
+  secret: mySuperSecretKeyForDmtDevelopmentOnly123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  expiration: 86400000
+
+logging:
+  level:
+    com.dmt.backend: DEBUG

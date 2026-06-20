@@ -3,6 +3,7 @@ package com.dmt.backend.engine.query.builder;
 import com.dmt.backend.metadata.filter.entity.DmtFilter;
 import com.dmt.backend.metadata.filter.repository.DmtFilterRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class FilterBuilder {
 
     private final DmtFilterRepository filterRepository;
@@ -21,6 +23,7 @@ public class FilterBuilder {
             MapSqlParameterSource params) {
 
         if (filters == null || filters.isEmpty()) {
+            log.debug("No filters provided screenCode={}", screenCode);
             return "";
         }
 
@@ -36,6 +39,7 @@ public class FilterBuilder {
                     filterMap.get(column);
 
             if (filter == null) {
+                log.warn("Invalid filter requested screenCode={} column={}", screenCode, column);
                 throw new RuntimeException(
                         "Invalid filter: " + column);
             }
@@ -114,6 +118,13 @@ public class FilterBuilder {
                                         + filter.getFilterType());
             }
         });
+
+        log.debug(
+                "Where clause built screenCode={} filterCount={} clause={}",
+                screenCode,
+                filters.size(),
+                where
+        );
 
         return where.toString();
     }

@@ -9,6 +9,7 @@ import com.dmt.backend.security.JwtService;
 import com.dmt.backend.user.entity.User;
 import com.dmt.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -25,12 +27,18 @@ public class AuthService {
 
     public String register(RegisterRequest request) {
 
+        log.info("Register request received username={}", request.username());
+
         if (userRepository.findByUsername(request.username()).isPresent()) {
+            log.warn("Register failed username={} reason=username_exists", request.username());
             throw new RuntimeException("Username already exists");
         }
 
         Role role = roleRepository.findByRoleName("ROLE_USER")
-                .orElseThrow(() -> new RuntimeException("Default role not found"));
+                .orElseThrow(() -> {
+                    log.error("Register failed username={} reason=default_role_not_found", request.username());
+                    return new RuntimeException("Default role not found");
+                });
 
         User user = User.builder()
                 .username(request.username())
@@ -40,22 +48,32 @@ public class AuthService {
 
         userRepository.save(user);
 
+        log.info("User registered successfully username={}", request.username());
+
         return "User registered successfully";
     }
 
     public AuthResponse login(LoginRequest request) {
 
+        log.info("Login request received username={}", request.username());
+
         User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> {
+                    log.warn("Login failed username={} reason=user_not_found", request.username());
+                    return new RuntimeException("User not found");
+                });
 
         if (!passwordEncoder.matches(
                 request.password(),
                 user.getPassword())) {
 
+            log.warn("Login failed username={} reason=invalid_credentials", request.username());
             throw new RuntimeException("Invalid credentials");
         }
 
         String token = jwtService.generateToken(user.getUsername());
+
+        log.info("Login successful username={}", request.username());
 
         return new AuthResponse(token);
     }

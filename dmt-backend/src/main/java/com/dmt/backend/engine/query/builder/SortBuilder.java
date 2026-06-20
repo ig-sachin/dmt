@@ -3,10 +3,12 @@ package com.dmt.backend.engine.query.builder;
 import com.dmt.backend.metadata.column.entity.DmtColumn;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @RequiredArgsConstructor
 @Component
+@Slf4j
 public class SortBuilder {
 
     private final DmtColumnRepository columnRepository;
@@ -20,10 +22,17 @@ public class SortBuilder {
                         screenCode,
                         sortColumn)
                 .map(DmtColumn::getColumnName)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Invalid sort column: "
-                                        + sortColumn));
+                .orElseThrow(() -> {
+                    log.warn(
+                            "Invalid sort column screenCode={} sortColumn={}",
+                            screenCode,
+                            sortColumn
+                    );
+
+                    return new RuntimeException(
+                            "Invalid sort column: "
+                                    + sortColumn);
+                });
     }
 
     public String validateSortDirection(
@@ -36,6 +45,7 @@ public class SortBuilder {
         if (!direction.equalsIgnoreCase("ASC")
                 && !direction.equalsIgnoreCase("DESC")) {
 
+            log.warn("Invalid sort direction direction={}", direction);
             throw new RuntimeException(
                     "Invalid sort direction");
         }

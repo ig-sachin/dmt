@@ -8,6 +8,7 @@ import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,11 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QueryEngineService {
+
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int FALLBACK_PAGE_SIZE = 20;
 
     private final DmtScreenRepository screenRepository;
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -29,17 +34,37 @@ public class QueryEngineService {
             String screenCode,
             SearchRequest request) {
 
+        if (request == null) {
+            log.warn("Search request body is empty screenCode={}", screenCode);
+            request = new SearchRequest(null, null, null, null, null);
+        }
+
+        log.info(
+                "Search requested screenCode={} page={} size={} sortColumn={} sortDirection={} filterKeys={}",
+                screenCode,
+                request.page(),
+                request.size(),
+                request.sortColumn(),
+                request.sortDirection(),
+                request.filters() == null ? null : request.filters().keySet()
+        );
+
         DmtScreen screen =
                 screenRepository
                         .findByScreenCode(screenCode)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Screen not found"));
+                        .orElseThrow(() -> {
+                            log.warn("Search failed screenCode={} reason=screen_not_found", screenCode);
+                            return new RuntimeException("Screen not found");
+                        });
+
+        int page = resolvePage(request);
+        int size = resolveSize(request, screen);
+        String requestedSortColumn = resolveSortColumn(request, screen);
 
         String sortColumn =
                 sortBuilder.validateSortColumn(
                         screenCode,
-                        request.sortColumn());
+                        requestedSortColumn);
 
         String sortDirection =
                 sortBuilder.validateSortDirection(
@@ -70,9 +95,9 @@ public class QueryEngineService {
                         + " "
                         + sortDirection
                         + " OFFSET "
-                        + (request.page() * request.size())
+                        + (page * size)
                         + " ROWS FETCH NEXT "
-                        + request.size()
+                        + size
                         + " ROWS ONLY";
 
         String countQuery =
@@ -91,18 +116,69 @@ public class QueryEngineService {
                         dataQuery,
                         params);
 
+        long safeTotalRecords =
+                totalRecords == null ? 0 : totalRecords;
+
         int totalPages =
                 (int) Math.ceil(
-                        (double) totalRecords
-                                / request.size());
+                        (double) safeTotalRecords / size);
+
+        log.info(
+                "Search completed screenCode={} page={} size={} totalRecords={} totalPages={} returnedRecords={}",
+                screenCode,
+                page,
+                size,
+                safeTotalRecords,
+                totalPages,
+                content.size()
+        );
 
         return new SearchResponse(
                 content,
-                totalRecords,
+                safeTotalRecords,
                 totalPages,
-                request.page(),
-                request.size()
+                page,
+                size
         );
+    }
+
+    private int resolvePage(SearchRequest request) {
+
+        if (request.page() == null || request.page() < 0) {
+            return 0;
+        }
+
+        return request.page();
+    }
+
+    private int resolveSize(
+            SearchRequest request,
+            DmtScreen screen) {
+
+        int size;
+
+        if (request.size() == null || request.size() <= 0) {
+            size = screen.getDefaultPageSize() == null
+                    ? FALLBACK_PAGE_SIZE
+                    : screen.getDefaultPageSize();
+        } else {
+            size = request.size();
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    private String resolveSortColumn(
+            SearchRequest request,
+            DmtScreen screen) {
+
+        if (request.sortColumn() == null
+                || request.sortColumn().isBlank()) {
+
+            return screen.getDefaultSortColumn();
+        }
+
+        return request.sortColumn();
     }
 
     private void validateFilterColumns(
@@ -114,16 +190,20 @@ public class QueryEngineService {
         }
 
         filters.keySet()
-                .forEach(column -> {
-
-                    columnRepository
-                            .findByScreenScreenCodeAndColumnName(
+                .forEach(column -> columnRepository
+                        .findByScreenScreenCodeAndColumnName(
+                                screenCode,
+                                column)
+                        .orElseThrow(() -> {
+                            log.warn(
+                                    "Invalid filter column screenCode={} column={}",
                                     screenCode,
-                                    column)
-                            .orElseThrow(() ->
-                                    new RuntimeException(
-                                            "Invalid filter column: "
-                                                    + column));
-                });
+                                    column
+                            );
+
+                            return new RuntimeException(
+                                    "Invalid filter column: "
+                                            + column);
+                        }));
     }
 }

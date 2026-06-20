@@ -11,12 +11,14 @@ import com.dmt.backend.metadata.screen.dto.ScreenResponse;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MetadataService {
 
     private final DmtScreenRepository screenRepository;
@@ -26,11 +28,15 @@ public class MetadataService {
     public MetadataResponse getMetadata(
             String screenCode) {
 
+        log.info("Metadata requested screenCode={}", screenCode);
+
         DmtScreen screen = screenRepository
                 .findByScreenCode(screenCode)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Screen not found"));
+                .orElseThrow(() -> {
+                    log.warn("Metadata request failed screenCode={} reason=screen_not_found", screenCode);
+                    return new RuntimeException(
+                            "Screen not found");
+                });
 
         ScreenResponse screenResponse =
                 new ScreenResponse(
@@ -60,6 +66,13 @@ public class MetadataService {
                         .stream()
                         .map(this::mapFilter)
                         .toList();
+
+        log.info(
+                "Metadata fetched screenCode={} columnCount={} filterCount={}",
+                screenCode,
+                columns.size(),
+                filters.size()
+        );
 
         return new MetadataResponse(
                 screenResponse,
