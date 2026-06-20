@@ -1,9 +1,11 @@
 package com.dmt.backend.engine.query.builder;
 
+import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.metadata.column.entity.DmtColumn;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 @RequiredArgsConstructor
@@ -29,7 +31,8 @@ public class SortBuilder {
                             sortColumn
                     );
 
-                    return new RuntimeException(
+                    return new ApiException(
+                            HttpStatus.BAD_REQUEST,
                             "Invalid sort column: "
                                     + sortColumn);
                 });
@@ -46,7 +49,8 @@ public class SortBuilder {
                 && !direction.equalsIgnoreCase("DESC")) {
 
             log.warn("Invalid sort direction direction={}", direction);
-            throw new RuntimeException(
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
                     "Invalid sort direction");
         }
 

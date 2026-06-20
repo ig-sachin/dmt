@@ -8,6 +8,7 @@ public record ScreenRequest(
         Integer defaultPageSize,
         String defaultSortColumn,
         String defaultSortDirection,
-        Boolean active
+        Boolean active,
+        String primaryKeyColumn
 ) {
 }

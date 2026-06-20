@@ -30,7 +30,13 @@ public record ColumnResponse(
 
         String alignment,
 
-        String formatMask
+        String formatMask,
+
+        String placeHolder,
+
+        Integer maxLength,
+
+        String dropdownCode
 
 ) {
 }

@@ -1,5 +1,7 @@
 package com.dmt.backend.engine.query.service;
 
+import com.dmt.backend.common.exception.InvalidFilterException;
+import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.engine.query.builder.FilterBuilder;
 import com.dmt.backend.engine.query.builder.SortBuilder;
 import com.dmt.backend.engine.query.dto.SearchRequest;
@@ -7,10 +9,12 @@ import com.dmt.backend.engine.query.dto.SearchResponse;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
+import com.dmt.backend.security.ScreenAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,10 +33,17 @@ public class QueryEngineService {
     private final DmtColumnRepository columnRepository;
     private final SortBuilder sortBuilder;
     private final FilterBuilder filterBuilder;
+    private final ScreenAuthorizationService authorizationService;
 
     public SearchResponse search(
             String screenCode,
             SearchRequest request) {
+
+        authorizationService.authorize(screenCode);
+        log.info(
+                "Query authorization successful screenCode={}",
+                screenCode
+        );
 
         if (request == null) {
             log.warn("Search request body is empty screenCode={}", screenCode);
@@ -54,7 +65,7 @@ public class QueryEngineService {
                         .findByScreenCode(screenCode)
                         .orElseThrow(() -> {
                             log.warn("Search failed screenCode={} reason=screen_not_found", screenCode);
-                            return new RuntimeException("Screen not found");
+                            return new ApiException(HttpStatus.NOT_FOUND, "Screen not found");
                         });
 
         int page = resolvePage(request);
@@ -201,9 +212,7 @@ public class QueryEngineService {
                                     column
                             );
 
-                            return new RuntimeException(
-                                    "Invalid filter column: "
-                                            + column);
+                            throw new InvalidFilterException("Invalid filter column screenCode=" + screenCode + ", column=" + column);
                         }));
     }
 }

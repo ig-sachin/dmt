@@ -34,4 +34,6 @@ public class DmtScreen extends BaseEntity {
     private String defaultSortDirection;
 
     private Boolean active;
+
+    private String primaryKeyColumn;
 }

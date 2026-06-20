@@ -48,7 +48,8 @@ public class MetadataService {
                         screen.getDefaultPageSize(),
                         screen.getDefaultSortColumn(),
                         screen.getDefaultSortDirection(),
-                        screen.getActive()
+                        screen.getActive(),
+                        screen.getPrimaryKeyColumn()
                 );
 
         List<ColumnResponse> columns =
@@ -98,7 +99,10 @@ public class MetadataService {
                 column.getDisplayOrder(),
                 column.getWidth(),
                 column.getAlignment(),
-                column.getFormatMask()
+                column.getFormatMask(),
+                column.getPlaceholder(),
+                column.getMaxLength(),
+                column.getDropdownCode()
         );
     }
 

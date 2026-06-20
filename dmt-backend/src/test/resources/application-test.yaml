@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:oracle:thin:@localhost:1521/FREEPDB1}
+    username: ${TEST_DB_USERNAME:dmt}
+    password: ${TEST_DB_PASSWORD:dmt12345}
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  sql:
+    init:
+      mode: never
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+
+  flyway:
+    enabled: false
+
+jwt:
+  secret: testSecretKeyForDmtIntegrationTests123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  expiration: 86400000
+
+logging:
+  level:
+    com.dmt.backend: INFO

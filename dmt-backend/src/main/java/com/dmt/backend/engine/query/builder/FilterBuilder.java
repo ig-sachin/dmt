@@ -1,10 +1,12 @@
 package com.dmt.backend.engine.query.builder;
 
+import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.metadata.filter.entity.DmtFilter;
 import com.dmt.backend.metadata.filter.repository.DmtFilterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -40,7 +42,8 @@ public class FilterBuilder {
 
             if (filter == null) {
                 log.warn("Invalid filter requested screenCode={} column={}", screenCode, column);
-                throw new RuntimeException(
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST,
                         "Invalid filter: " + column);
             }
 
@@ -113,7 +116,8 @@ public class FilterBuilder {
                 }
 
                 default ->
-                        throw new RuntimeException(
+                        throw new ApiException(
+                                HttpStatus.BAD_REQUEST,
                                 "Unsupported filter type: "
                                         + filter.getFilterType());
             }

@@ -43,6 +43,12 @@ public class DmtColumn extends BaseEntity {
 
     private String formatMask;
 
+    private String placeholder;
+
+    private Integer maxLength;
+
+    private String dropdownCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screen_id")
     private DmtScreen screen;

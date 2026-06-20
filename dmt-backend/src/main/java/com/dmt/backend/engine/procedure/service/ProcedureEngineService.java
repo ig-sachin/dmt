@@ -1,14 +1,17 @@
 package com.dmt.backend.engine.procedure.service;
 
+import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.engine.procedure.dto.ProcedureExecutionRequest;
 import com.dmt.backend.engine.procedure.dto.ProcedureExecutionResponse;
 import com.dmt.backend.metadata.procedure.entity.DmtProcedure;
 import com.dmt.backend.metadata.procedure.repository.DmtProcedureRepository;
 import com.dmt.backend.metadata.procedureparam.entity.DmtProcedureParam;
 import com.dmt.backend.metadata.procedureparam.repository.DmtProcedureParamRepository;
+import com.dmt.backend.security.ScreenAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.sql.CallableStatement;
@@ -23,9 +26,17 @@ public class ProcedureEngineService {
     private final JdbcTemplate jdbcTemplate;
     private final DmtProcedureRepository procedureRepository;
     private final DmtProcedureParamRepository paramRepository;
+    private final ScreenAuthorizationService authorizationService;
 
     public ProcedureExecutionResponse execute(
             ProcedureExecutionRequest request) {
+
+        authorizationService.authorize(request.screenCode());
+        log.info(
+                "Procedure authorization successful screenCode={} operationType={}",
+                request.screenCode(),
+                request.operationType()
+        );
 
         log.info(
                 "Procedure execution requested screenCode={} operationType={} valueKeys={}",
@@ -46,7 +57,8 @@ public class ProcedureEngineService {
                                     request.operationType()
                             );
 
-                            return new RuntimeException(
+                            return new ApiException(
+                                    HttpStatus.BAD_REQUEST,
                                     "Procedure not found");
                         });
 
@@ -55,7 +67,7 @@ public class ProcedureEngineService {
                         .findByProcedureIdOrderByParameterOrderAsc(
                                 procedure.getId());
 
-        log.debug(
+        log.info(
                 "Resolved procedure procedureName={} procedureId={} paramCount={}",
                 procedure.getProcedureName(),
                 procedure.getId(),
@@ -94,7 +106,8 @@ public class ProcedureEngineService {
                             param.getColumnName()
                     );
 
-                    throw new RuntimeException(
+                    throw new ApiException(
+                            HttpStatus.BAD_REQUEST,
                             "Missing required value for: "
                                     + param.getColumnName());
                 }

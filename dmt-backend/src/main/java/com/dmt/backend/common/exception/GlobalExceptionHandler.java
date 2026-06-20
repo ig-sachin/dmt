@@ -3,7 +3,9 @@ package com.dmt.backend.common.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -17,8 +19,7 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
-    @ResponseStatus
-    public ApiErrorResponse handleApiException(
+    public ResponseEntity<ApiErrorResponse> handleApiException(
             ApiException exception,
             HttpServletRequest request) {
 
@@ -29,7 +30,7 @@ public class GlobalExceptionHandler {
                 exception.getMessage()
         );
 
-        return new ApiErrorResponse(
+        ApiErrorResponse response = new ApiErrorResponse(
                 Instant.now(),
                 exception.getStatus().value(),
                 exception.getStatus().getReasonPhrase(),
@@ -37,6 +38,35 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
+
+        return ResponseEntity
+                .status(exception.getStatus())
+                .body(response);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request) {
+
+        log.warn(
+                "Access denied path={} message={}",
+                request.getRequestURI(),
+                exception.getMessage()
+        );
+
+        ApiErrorResponse response = new ApiErrorResponse(
+                Instant.now(),
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -91,5 +121,27 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
+    }
+
+    @ExceptionHandler(InvalidFilterException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidFilter(
+            InvalidFilterException ex,
+            HttpServletRequest request) {
+
+        log.warn(
+                "Invalid filter path={} message={}",
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(ApiErrorResponse.builder()
+                        .timestamp(Instant.now())
+                        .status(400)
+                        .error("Bad Request")
+                        .message(ex.getMessage())
+                        .path(request.getRequestURI())
+                        .build());
     }
 }

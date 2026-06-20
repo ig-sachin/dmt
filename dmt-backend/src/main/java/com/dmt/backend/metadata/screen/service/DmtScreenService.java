@@ -36,6 +36,7 @@ public class DmtScreenService {
                 .defaultSortColumn(request.defaultSortColumn())
                 .defaultSortDirection(request.defaultSortDirection())
                 .active(request.active())
+                .primaryKeyColumn(request.primaryKeyColumn())
                 .build();
 
         DmtScreen saved = repository.save(screen);
@@ -88,7 +89,8 @@ public class DmtScreenService {
                 screen.getDefaultPageSize(),
                 screen.getDefaultSortColumn(),
                 screen.getDefaultSortDirection(),
-                screen.getActive()
+                screen.getActive(),
+                screen.getPrimaryKeyColumn()
         );
     }
 }

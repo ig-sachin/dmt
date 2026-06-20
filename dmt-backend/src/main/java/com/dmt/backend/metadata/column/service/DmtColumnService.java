@@ -6,9 +6,12 @@ import com.dmt.backend.metadata.column.entity.DmtColumn;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
+import com.dmt.backend.common.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -31,9 +34,8 @@ public class DmtColumnService {
         DmtScreen screen = screenRepository.findById(request.screenId())
                 .orElseThrow(() -> {
                     log.warn("Create column failed screenId={} reason=screen_not_found", request.screenId());
-                    return new RuntimeException("Screen not found");
+                    return new ApiException(HttpStatus.NOT_FOUND, "Screen not found");
                 });
-
         DmtColumn column = DmtColumn.builder()
                 .screen(screen)
                 .columnName(request.columnName())
@@ -48,6 +50,9 @@ public class DmtColumnService {
                 .width(request.width())
                 .alignment(request.alignment())
                 .formatMask(request.formatMask())
+                .placeholder(request.placeHolder())
+                .maxLength(request.maxLength())
+                .dropdownCode(request.dropdownCode())
                 .build();
 
         DmtColumn saved = columnRepository.save(column);
@@ -62,6 +67,7 @@ public class DmtColumnService {
         return map(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<ColumnResponse> getByScreen(Long screenId) {
 
         List<ColumnResponse> columns = columnRepository
@@ -98,7 +104,10 @@ public class DmtColumnService {
                 column.getDisplayOrder(),
                 column.getWidth(),
                 column.getAlignment(),
-                column.getFormatMask()
+                column.getFormatMask(),
+                column.getPlaceholder(),
+                column.getMaxLength(),
+                column.getDropdownCode()
         );
     }
 }

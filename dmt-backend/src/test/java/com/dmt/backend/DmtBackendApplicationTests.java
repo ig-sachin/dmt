@@ -1,13 +1,18 @@
 package com.dmt.backend;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
 
-@SpringBootTest
-class DmtBackendApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
-
+@Suite
+@SelectClasses({
+        CrudIntegrationTest.class,
+        MetadataEngineIntegrationTest.class,
+        MetadataIntegrationTest.class,
+        ProcedureEngineIntegrationTest.class,
+        QueryEngineIntegrationTest.class,
+        SecurityIntegrationTest.class,
+        ScreenAuthorizationServiceTest.class,
+        ScreenRoleControllerIntegrationTest.class
+})
+public class DmtBackendApplicationTests {
 }
