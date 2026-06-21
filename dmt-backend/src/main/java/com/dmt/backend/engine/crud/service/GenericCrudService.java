@@ -9,6 +9,7 @@ import com.dmt.backend.engine.procedure.service.ProcedureEngineService;
 import com.dmt.backend.metadata.procedure.entity.OperationType;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
 import com.dmt.backend.security.ScreenAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,13 +47,23 @@ public class GenericCrudService {
     }
 
     private ProcedureExecutionResponse execute(OperationType opType, String screenCode, Map<String, Object> values) {
-        authorizationService.authorize(screenCode);
+        authorizationService.authorize(screenCode, mapPermissionType(opType));
         log.info("Generic CRUD authorization successful operationType={} screenCode={}", opType, screenCode);
         log.info("Generic CRUD requested operationType={} screenCode={} valueKeys={}", opType, screenCode, values == null ? null : values.keySet());
 
         ProcedureExecutionResponse response = procedureEngineService.execute(
                 new ProcedureExecutionRequest(screenCode, opType, values)
         );
+
+        if (!response.success()) {
+            log.warn(
+                    "Generic CRUD audit skipped screenCode={} operationType={} reason=procedure_reported_failure message={}",
+                    screenCode,
+                    opType,
+                    response.message()
+            );
+            return response;
+        }
 
         DmtScreen screen = screenRepository.findByScreenCode(screenCode)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Screen not found"));
@@ -113,6 +124,18 @@ public class GenericCrudService {
             case UPDATE -> AuditOperation.UPDATE;
 
             case DELETE -> AuditOperation.DELETE;
+        };
+    }
+
+    private PermissionType mapPermissionType(OperationType opType) {
+
+        return switch (opType) {
+
+            case INSERT -> PermissionType.INSERT;
+
+            case UPDATE -> PermissionType.UPDATE;
+
+            case DELETE -> PermissionType.DELETE;
         };
     }
 }

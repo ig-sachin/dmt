@@ -2,15 +2,20 @@ package com.dmt.backend.engine.dropdown.service;
 
 import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.engine.dropdown.dto.DropdownOptionResponse;
+import com.dmt.backend.metadata.column.entity.DmtColumn;
+import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.dropdown.entity.DmtDropdown;
 import com.dmt.backend.metadata.dropdown.repository.DmtDropdownRepository;
 import com.dmt.backend.metadata.dropdownparam.entity.DmtDropdownParam;
 import com.dmt.backend.metadata.dropdownparam.repository.DmtDropdownParamRepository;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
+import com.dmt.backend.security.ScreenAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +28,8 @@ public class DropdownEngineService {
 
     private final DmtDropdownRepository dropdownRepository;
     private final DmtDropdownParamRepository paramRepository;
+    private final DmtColumnRepository columnRepository;
+    private final ScreenAuthorizationService authorizationService;
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public List<DropdownOptionResponse> getOptions(
@@ -43,6 +50,8 @@ public class DropdownEngineService {
                                     HttpStatus.NOT_FOUND,
                                     "Dropdown not found");
                         });
+
+        authorizeAgainstReferencingScreens(dropdownCode);
 
         List<DmtDropdownParam> params =
                 paramRepository
@@ -104,5 +113,54 @@ public class DropdownEngineService {
                                         row.get("LABEL"))
                         ))
                 .toList();
+    }
+
+    /**
+     * A dropdown has no owning screen of its own - it can be referenced by columns on
+     * one or more screens. We authorize the caller if they have VIEW access to at
+     * least one screen that actually references this dropdown. If no screen
+     * references it (orphaned/misconfigured dropdown), we fail closed.
+     */
+    private void authorizeAgainstReferencingScreens(String dropdownCode) {
+
+        List<String> referencingScreenCodes =
+                columnRepository.findByDropdownCode(dropdownCode)
+                        .stream()
+                        .map(DmtColumn::getScreen)
+                        .filter(java.util.Objects::nonNull)
+                        .map(screen -> screen.getScreenCode())
+                        .distinct()
+                        .toList();
+
+        if (referencingScreenCodes.isEmpty()) {
+            log.warn(
+                    "Dropdown options denied dropdownCode={} reason=not_referenced_by_any_screen",
+                    dropdownCode
+            );
+            throw new AccessDeniedException(
+                    "Access denied for dropdown " + dropdownCode);
+        }
+
+        boolean authorized = false;
+
+        for (String screenCode : referencingScreenCodes) {
+            try {
+                authorizationService.authorize(screenCode, PermissionType.VIEW);
+                authorized = true;
+                break;
+            } catch (AccessDeniedException ignored) {
+                // try the next referencing screen
+            }
+        }
+
+        if (!authorized) {
+            log.warn(
+                    "Dropdown options denied dropdownCode={} reason=no_viewable_referencing_screen referencingScreens={}",
+                    dropdownCode,
+                    referencingScreenCodes
+            );
+            throw new AccessDeniedException(
+                    "Access denied for dropdown " + dropdownCode);
+        }
     }
 }

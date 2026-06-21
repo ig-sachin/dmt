@@ -80,7 +80,7 @@ public class ExportService {
             for (Map<String, Object> row : response.content()) {
                 for (DmtColumn column : columns) {
                     Object value = row.get(column.getColumnName());
-                    csv.append(value == null ? "" : value.toString());
+                    csv.append(escapeCsv(value));
                     csv.append(",");
                 }
                 csv.append("\n");
@@ -111,58 +111,87 @@ public class ExportService {
                 "Excel export requested screenCode={}",
                 screenCode);
 
-        SearchRequest searchRequest =
-                new SearchRequest(
-                        0,
-                        Integer.MAX_VALUE,
-                        request.sortColumn(),
-                        request.sortDirection(),
-                        request.filters()
-                );
-
-        SearchResponse response =
-                queryEngineService.search(
-                        screenCode,
-                        searchRequest);
-
         List<DmtColumn> columns =
                 columnRepository
                         .findByScreenScreenCodeOrderByDisplayOrderAsc(
                                 screenCode);
 
         try (
-                Workbook workbook =
-                        new XSSFWorkbook();
-
+                Workbook workbook = new XSSFWorkbook();
                 ByteArrayOutputStream outputStream =
                         new ByteArrayOutputStream()
         ) {
 
             Sheet sheet =
-                    workbook.createSheet(
-                            screenCode);
+                    workbook.createSheet(screenCode);
 
             createHeaderRow(
                     workbook,
                     sheet,
                     columns);
 
-            createDataRows(
-                    sheet,
-                    columns,
-                    response.content());
+            int currentRow = 1;
+
+            int page = 0;
+            int pageSize = 100;
+
+            long totalRowsExported = 0;
+            long totalRecords = 0;
+
+            while (true) {
+
+                SearchRequest searchRequest =
+                        new SearchRequest(
+                                page,
+                                pageSize,
+                                request.sortColumn(),
+                                request.sortDirection(),
+                                request.filters()
+                        );
+
+                SearchResponse response =
+                        queryEngineService.search(
+                                screenCode,
+                                searchRequest);
+
+                if (totalRecords == 0) {
+                    totalRecords =
+                            response.totalRecords();
+                }
+
+                if (response.content() == null
+                        || response.content().isEmpty()) {
+                    break;
+                }
+
+                currentRow =
+                        createDataRows(
+                                sheet,
+                                columns,
+                                response.content(),
+                                currentRow);
+
+                totalRowsExported +=
+                        response.content().size();
+
+                if (totalRowsExported >= totalRecords) {
+                    break;
+                }
+
+                page++;
+            }
 
             autoSizeColumns(
                     sheet,
                     columns.size());
 
-            workbook.write(
-                    outputStream);
+            workbook.write(outputStream);
 
             log.info(
-                    "Excel export completed screenCode={} rows={}",
+                    "Excel export completed screenCode={} totalRecords={} exportedRows={}",
                     screenCode,
-                    response.content().size());
+                    totalRecords,
+                    totalRowsExported);
 
             return outputStream.toByteArray();
 
@@ -226,16 +255,18 @@ public class ExportService {
         }
     }
 
-    private void createDataRows(
+    private int createDataRows(
             Sheet sheet,
             List<DmtColumn> columns,
-            List<Map<String, Object>> rows) {
+            List<Map<String, Object>> rows,
+            int startRow) {
 
-        int rowNumber = 1;
+        int rowNumber = startRow;
 
         for (Map<String, Object> rowData : rows) {
 
-            Row row = sheet.createRow(rowNumber++);
+            Row row =
+                    sheet.createRow(rowNumber++);
 
             int columnIndex = 0;
 
@@ -252,6 +283,15 @@ public class ExportService {
 
                     cell.setCellValue("");
 
+                } else if (value instanceof Number number) {
+
+                    cell.setCellValue(
+                            number.doubleValue());
+
+                } else if (value instanceof Boolean bool) {
+
+                    cell.setCellValue(bool);
+
                 } else {
 
                     cell.setCellValue(
@@ -259,5 +299,32 @@ public class ExportService {
                 }
             }
         }
+
+        return rowNumber;
+    }
+
+    private String escapeCsv(
+            Object value) {
+
+        if (value == null) {
+            return "";
+        }
+
+        String text =
+                value.toString();
+
+        if (text.contains(",")
+                || text.contains("\"")
+                || text.contains("\n")) {
+
+            text =
+                    text.replace(
+                            "\"",
+                            "\"\"");
+
+            return "\"" + text + "\"";
+        }
+
+        return text;
     }
 }

@@ -9,6 +9,7 @@ import com.dmt.backend.engine.query.dto.SearchResponse;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
 import com.dmt.backend.security.ScreenAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class QueryEngineService {
             String screenCode,
             SearchRequest request) {
 
-        authorizationService.authorize(screenCode);
+        authorizationService.authorize(screenCode, PermissionType.VIEW);
         log.info(
                 "Query authorization successful screenCode={}",
                 screenCode

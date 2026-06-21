@@ -77,6 +77,10 @@ public class DropdownService {
                 "Deleting dropdown {}",
                 id);
 
+        if (!repository.existsById(id)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Dropdown not found");
+        }
+
         repository.deleteById(id);
     }
 

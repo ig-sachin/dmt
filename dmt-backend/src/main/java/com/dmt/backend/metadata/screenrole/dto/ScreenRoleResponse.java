@@ -8,7 +8,15 @@ public record ScreenRoleResponse(
 
         String screenCode,
 
-        String roleName
+        String roleName,
+
+        Boolean canView,
+
+        Boolean canInsert,
+
+        Boolean canUpdate,
+
+        Boolean canDelete
 
 ) {
 }

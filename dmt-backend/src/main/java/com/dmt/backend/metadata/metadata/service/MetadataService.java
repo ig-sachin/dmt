@@ -10,8 +10,12 @@ import com.dmt.backend.metadata.metadata.dto.MetadataResponse;
 import com.dmt.backend.metadata.screen.dto.ScreenResponse;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
+import com.dmt.backend.security.ScreenAuthorizationService;
+import com.dmt.backend.common.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,17 +28,20 @@ public class MetadataService {
     private final DmtScreenRepository screenRepository;
     private final DmtColumnRepository columnRepository;
     private final DmtFilterRepository filterRepository;
+    private final ScreenAuthorizationService authorizationService;
 
     public MetadataResponse getMetadata(
             String screenCode) {
 
+        authorizationService.authorize(screenCode, PermissionType.VIEW);
         log.info("Metadata requested screenCode={}", screenCode);
 
         DmtScreen screen = screenRepository
                 .findByScreenCode(screenCode)
                 .orElseThrow(() -> {
                     log.warn("Metadata request failed screenCode={} reason=screen_not_found", screenCode);
-                    return new RuntimeException(
+                    return new ApiException(
+                            HttpStatus.NOT_FOUND,
                             "Screen not found");
                 });
 

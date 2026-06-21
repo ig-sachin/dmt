@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.validation.repository;
 import com.dmt.backend.metadata.validation.entity.DmtValidation;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface DmtValidationRepository
@@ -10,4 +11,7 @@ public interface DmtValidationRepository
 
     List<DmtValidation>
     findByColumnIdAndActiveTrue(Long columnId);
+
+    List<DmtValidation>
+    findByColumnIdInAndActiveTrue(Collection<Long> columnIds);
 }

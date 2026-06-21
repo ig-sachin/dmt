@@ -1,5 +1,7 @@
 package com.dmt.backend.security;
 
+import com.dmt.backend.metadata.screenrole.entity.DmtScreenRole;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
 import com.dmt.backend.metadata.screenrole.repository.DmtScreenRoleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,12 @@ public class ScreenAuthorizationService {
 
     private final DmtScreenRoleRepository repository;
 
-    public void authorize(String screenCode) {
+    /**
+     * Authorizes the current user for a specific operation on a screen.
+     * Screen-level access alone is not sufficient - the matching DmtScreenRole row
+     * for one of the user's roles must also permit the requested operation.
+     */
+    public void authorize(String screenCode, PermissionType permissionType) {
 
         Authentication authentication =
                 SecurityContextHolder
@@ -26,8 +33,9 @@ public class ScreenAuthorizationService {
 
         if (authentication == null || !authentication.isAuthenticated()) {
             log.warn(
-                    "Screen authorization failed screenCode={} reason=not_authenticated",
-                    screenCode
+                    "Screen authorization failed screenCode={} permission={} reason=not_authenticated",
+                    screenCode,
+                    permissionType
             );
 
             throw new AccessDeniedException(
@@ -40,31 +48,30 @@ public class ScreenAuthorizationService {
                         .map(Object::toString)
                         .toList();
 
-        List<String> allowedRoles =
-                repository.findByScreenScreenCode(screenCode)
-                        .stream()
-                        .map(screenRole -> screenRole.getRoleName())
-                        .toList();
-
-        log.info(
-                "Authorizing screen access username={} screenCode={} userRoles={} allowedRoles={}",
-                authentication.getName(),
-                screenCode,
-                userRoles,
-                allowedRoles
-        );
+        List<DmtScreenRole> screenRoles =
+                repository.findByScreenScreenCode(screenCode);
 
         boolean authorized =
-                userRoles.stream()
-                        .anyMatch(allowedRoles::contains);
+                screenRoles.stream()
+                        .filter(screenRole -> userRoles.contains(screenRole.getRoleName()))
+                        .anyMatch(screenRole -> screenRole.permits(permissionType));
+
+        log.info(
+                "Authorizing screen operation username={} screenCode={} permission={} userRoles={} authorized={}",
+                authentication.getName(),
+                screenCode,
+                permissionType,
+                userRoles,
+                authorized
+        );
 
         if (!authorized) {
             log.warn(
-                    "Screen authorization failed username={} screenCode={} userRoles={} allowedRoles={}",
+                    "Screen authorization failed username={} screenCode={} permission={} userRoles={}",
                     authentication.getName(),
                     screenCode,
-                    userRoles,
-                    allowedRoles
+                    permissionType,
+                    userRoles
             );
 
             throw new AccessDeniedException(
@@ -73,9 +80,10 @@ public class ScreenAuthorizationService {
         }
 
         log.info(
-                "Screen authorization successful username={} screenCode={}",
+                "Screen authorization successful username={} screenCode={} permission={}",
                 authentication.getName(),
-                screenCode
+                screenCode,
+                permissionType
         );
     }
 }

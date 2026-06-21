@@ -18,4 +18,11 @@ public interface DmtColumnRepository
             String screenCode,
             String columnName
     );
+
+    /**
+     * Screen codes that have at least one column wired to the given dropdown.
+     * Used to authorize dropdown-option requests against the screens that actually
+     * expose that dropdown, since a dropdown has no owning screen of its own.
+     */
+    List<DmtColumn> findByDropdownCode(String dropdownCode);
 }

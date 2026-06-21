@@ -22,6 +22,14 @@ public class ScreenRoleController {
         return service.create(request);
     }
 
+    @PutMapping("/{id}")
+    public ScreenRoleResponse update(
+            @PathVariable Long id,
+            @RequestBody ScreenRoleRequest request) {
+
+        return service.update(id, request);
+    }
+
     @GetMapping("/{screenCode}")
     public List<ScreenRoleResponse> get(
             @PathVariable String screenCode) {

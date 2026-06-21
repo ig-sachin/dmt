@@ -1,5 +1,6 @@
 package com.dmt.backend.engine.form.service;
 
+import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.engine.form.dto.FormFieldResponse;
 import com.dmt.backend.engine.form.dto.FormResponse;
 import com.dmt.backend.engine.form.dto.FormValidationResponse;
@@ -7,12 +8,18 @@ import com.dmt.backend.metadata.column.entity.DmtColumn;
 import com.dmt.backend.metadata.column.repository.DmtColumnRepository;
 import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
+import com.dmt.backend.metadata.validation.entity.DmtValidation;
 import com.dmt.backend.metadata.validation.repository.DmtValidationRepository;
+import com.dmt.backend.security.ScreenAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,9 +29,12 @@ public class FormEngineService {
     private final DmtScreenRepository screenRepository;
     private final DmtColumnRepository columnRepository;
     private final DmtValidationRepository validationRepository;
+    private final ScreenAuthorizationService authorizationService;
 
     public FormResponse getForm(
             String screenCode) {
+
+        authorizationService.authorize(screenCode, PermissionType.VIEW);
         log.info(
                 "Loading form metadata for screen={}",
                 screenCode);
@@ -32,15 +42,31 @@ public class FormEngineService {
                 screenRepository
                         .findByScreenCode(screenCode)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ApiException(
+                                        HttpStatus.NOT_FOUND,
                                         "Screen not found"));
 
-        List<FormFieldResponse> fields =
+        List<DmtColumn> columnList =
                 columnRepository
                         .findByScreenScreenCodeOrderByDisplayOrderAsc(
-                                screenCode)
+                                screenCode);
+
+        // Batch-load validations for all columns on this screen in one query instead
+        // of one query per column (avoids N+1).
+        List<Long> columnIds = columnList.stream().map(DmtColumn::getId).toList();
+
+        Map<Long, List<DmtValidation>> validationsByColumnId =
+                columnIds.isEmpty()
+                        ? Map.of()
+                        : validationRepository
+                        .findByColumnIdInAndActiveTrue(columnIds)
                         .stream()
-                        .map(this::map)
+                        .collect(Collectors.groupingBy(
+                                validation -> validation.getColumn().getId()));
+
+        List<FormFieldResponse> fields =
+                columnList.stream()
+                        .map(column -> map(column, validationsByColumnId.getOrDefault(column.getId(), List.of())))
                         .toList();
 
         log.info(
@@ -56,12 +82,11 @@ public class FormEngineService {
     }
 
     private FormFieldResponse map(
-            DmtColumn column) {
+            DmtColumn column,
+            List<DmtValidation> validations) {
 
-        var validations =
-                validationRepository
-                        .findByColumnIdAndActiveTrue(
-                                column.getId())
+        var validationResponses =
+                validations
                         .stream()
                         .map(this::mapValidation)
                         .toList();
@@ -98,12 +123,12 @@ public class FormEngineService {
 
                 column.getDropdownCode(),
 
-                validations
+                validationResponses
         );
     }
 
     private FormValidationResponse mapValidation(
-            com.dmt.backend.metadata.validation.entity.DmtValidation validation) {
+            DmtValidation validation) {
 
         return new FormValidationResponse(
 

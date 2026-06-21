@@ -3,6 +3,8 @@ package com.dmt.backend.common.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -97,6 +99,59 @@ public class GlobalExceptionHandler {
                 "Validation failed",
                 request.getRequestURI(),
                 errors
+        );
+    }
+
+    /**
+     * Thrown by Spring Data's deleteById()/getById() when the row does not exist.
+     * Without this handler it falls through to handleUnexpected() as a 500.
+     */
+    @ExceptionHandler(EmptyResultDataAccessException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiErrorResponse handleEmptyResult(
+            EmptyResultDataAccessException exception,
+            HttpServletRequest request) {
+
+        log.warn(
+                "Entity not found path={} message={}",
+                request.getRequestURI(),
+                exception.getMessage()
+        );
+
+        return new ApiErrorResponse(
+                Instant.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                "The requested resource was not found",
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    /**
+     * Thrown when a write violates a DB constraint - most commonly a foreign-key
+     * constraint (e.g. deleting a screen that still has columns/filters/procedures
+     * pointing at it) or a unique-key violation that slipped past application checks.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleDataIntegrityViolation(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request) {
+
+        log.warn(
+                "Data integrity violation path={} message={}",
+                request.getRequestURI(),
+                exception.getMessage()
+        );
+
+        return new ApiErrorResponse(
+                Instant.now(),
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "The operation could not be completed because related data still exists or a uniqueness constraint was violated.",
+                request.getRequestURI(),
+                null
         );
     }
 

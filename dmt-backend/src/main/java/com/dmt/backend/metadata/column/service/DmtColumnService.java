@@ -83,6 +83,10 @@ public class DmtColumnService {
 
     public void delete(Long id) {
 
+        if (!columnRepository.existsById(id)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Column not found");
+        }
+
         columnRepository.deleteById(id);
 
         log.info("Column deleted id={}", id);

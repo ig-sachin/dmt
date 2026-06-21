@@ -4,7 +4,15 @@ public record ScreenRoleRequest(
 
         Long screenId,
 
-        String roleName
+        String roleName,
+
+        Boolean canView,
+
+        Boolean canInsert,
+
+        Boolean canUpdate,
+
+        Boolean canDelete
 
 ) {
 }

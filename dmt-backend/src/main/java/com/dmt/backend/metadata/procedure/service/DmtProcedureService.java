@@ -1,5 +1,6 @@
 package com.dmt.backend.metadata.procedure.service;
 
+import com.dmt.backend.common.exception.ApiException;
 import com.dmt.backend.metadata.procedure.dto.ProcedureRequest;
 import com.dmt.backend.metadata.procedure.dto.ProcedureResponse;
 import com.dmt.backend.metadata.procedure.entity.DmtProcedure;
@@ -8,6 +9,7 @@ import com.dmt.backend.metadata.screen.entity.DmtScreen;
 import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,7 +37,8 @@ public class DmtProcedureService {
                                 request.screenId())
                         .orElseThrow(() -> {
                             log.warn("Create procedure failed screenId={} reason=screen_not_found", request.screenId());
-                            return new RuntimeException(
+                            return new ApiException(
+                                    HttpStatus.NOT_FOUND,
                                     "Screen not found");
                         });
 
@@ -78,6 +81,10 @@ public class DmtProcedureService {
     }
 
     public void delete(Long id) {
+
+        if (!procedureRepository.existsById(id)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Procedure not found");
+        }
 
         procedureRepository.deleteById(id);
 

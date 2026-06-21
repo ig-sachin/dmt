@@ -70,6 +70,10 @@ public class DropdownParamService {
 
     public void delete(Long id) {
 
+        if (!repository.existsById(id)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Dropdown parameter not found");
+        }
+
         repository.deleteById(id);
 
         log.info(

@@ -1,6 +1,7 @@
 package com.dmt.backend;
 
 import com.dmt.backend.metadata.screenrole.entity.DmtScreenRole;
+import com.dmt.backend.metadata.screenrole.entity.PermissionType;
 import com.dmt.backend.metadata.screenrole.repository.DmtScreenRoleRepository;
 import com.dmt.backend.security.ScreenAuthorizationService;
 import org.junit.jupiter.api.AfterEach;
@@ -45,9 +46,9 @@ class ScreenAuthorizationServiceTest {
         );
 
         when(repository.findByScreenScreenCode("CUSTOMER"))
-                .thenReturn(List.of(screenRole("ROLE_ADMIN")));
+                .thenReturn(List.of(screenRole("ROLE_ADMIN", true, true, true, true)));
 
-        service.authorize("CUSTOMER");
+        service.authorize("CUSTOMER", PermissionType.VIEW);
     }
 
     @Test
@@ -65,9 +66,9 @@ class ScreenAuthorizationServiceTest {
         );
 
         when(repository.findByScreenScreenCode("EMPLOYEE"))
-                .thenReturn(List.of(screenRole("ROLE_ADMIN")));
+                .thenReturn(List.of(screenRole("ROLE_ADMIN", true, true, true, true)));
 
-        assertThatThrownBy(() -> service.authorize("EMPLOYEE"))
+        assertThatThrownBy(() -> service.authorize("EMPLOYEE", PermissionType.VIEW))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Access denied for screen EMPLOYEE");
     }
@@ -78,16 +79,77 @@ class ScreenAuthorizationServiceTest {
         ScreenAuthorizationService service =
                 new ScreenAuthorizationService(repository);
 
-        assertThatThrownBy(() -> service.authorize("CUSTOMER"))
+        assertThatThrownBy(() -> service.authorize("CUSTOMER", PermissionType.VIEW))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Access denied for screen CUSTOMER");
     }
 
-    private DmtScreenRole screenRole(String roleName) {
+    @Test
+    void shouldAllowViewButRejectDeleteForReadOnlyRole() {
+
+        ScreenAuthorizationService service =
+                new ScreenAuthorizationService(repository);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "viewer-user",
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_VIEWER"))
+                )
+        );
+
+        when(repository.findByScreenScreenCode("CUSTOMER"))
+                .thenReturn(List.of(screenRole("ROLE_VIEWER", true, false, false, false)));
+
+        service.authorize("CUSTOMER", PermissionType.VIEW);
+
+        assertThatThrownBy(() -> service.authorize("CUSTOMER", PermissionType.DELETE))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("Access denied for screen CUSTOMER");
+    }
+
+    @Test
+    void shouldAllowWhenAnyOfTheUsersMultipleRolesPermitsTheOperation() {
+
+        ScreenAuthorizationService service =
+                new ScreenAuthorizationService(repository);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "dual-role-user",
+                        null,
+                        List.of(
+                                new SimpleGrantedAuthority("ROLE_VIEWER"),
+                                new SimpleGrantedAuthority("ROLE_OPERATIONS"))
+                )
+        );
+
+        when(repository.findByScreenScreenCode("CUSTOMER"))
+                .thenReturn(List.of(
+                        screenRole("ROLE_VIEWER", true, false, false, false),
+                        screenRole("ROLE_OPERATIONS", true, true, true, false)
+                ));
+
+        service.authorize("CUSTOMER", PermissionType.INSERT);
+
+        assertThatThrownBy(() -> service.authorize("CUSTOMER", PermissionType.DELETE))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    private DmtScreenRole screenRole(
+            String roleName,
+            boolean canView,
+            boolean canInsert,
+            boolean canUpdate,
+            boolean canDelete) {
 
         DmtScreenRole screenRole = new DmtScreenRole();
 
         screenRole.setRoleName(roleName);
+        screenRole.setCanView(canView);
+        screenRole.setCanInsert(canInsert);
+        screenRole.setCanUpdate(canUpdate);
+        screenRole.setCanDelete(canDelete);
 
         return screenRole;
     }
