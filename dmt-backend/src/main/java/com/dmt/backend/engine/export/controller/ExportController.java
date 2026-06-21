@@ -35,4 +35,26 @@ public class ExportController {
                         "text/csv")
                 .body(file);
     }
+
+    @PostMapping("/{screenCode}/excel")
+    public ResponseEntity<byte[]> exportExcel(
+            @PathVariable String screenCode,
+            @RequestBody ExportRequest request) {
+
+        byte[] file =
+                service.exportExcel(
+                        screenCode,
+                        request);
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename="
+                                + screenCode
+                                + ".xlsx")
+                .header(
+                        HttpHeaders.CONTENT_TYPE,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(file);
+    }
 }
