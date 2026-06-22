@@ -12,7 +12,8 @@ import org.junit.platform.suite.api.Suite;
         QueryEngineIntegrationTest.class,
         SecurityIntegrationTest.class,
         ScreenAuthorizationServiceTest.class,
-        ScreenRoleControllerIntegrationTest.class
+        ScreenRoleControllerIntegrationTest.class,
+        ColumnResponseTest.class
 })
 public class DmtBackendApplicationTests {
 }

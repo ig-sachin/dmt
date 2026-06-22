@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${TEST_DB_URL:jdbc:oracle:thin:@localhost:1521/FREEPDB1}
     username: ${TEST_DB_USERNAME:dmt}
-    password: ${TEST_DB_PASSWORD:dmt12345}
+    password: ${TEST_DB_PASSWORD:sekiro}
     driver-class-name: oracle.jdbc.OracleDriver
 
   sql:
@@ -24,6 +24,14 @@ spring:
 jwt:
   secret: testSecretKeyForDmtIntegrationTests123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
   expiration: 86400000
+
+app:
+  bootstrap-admin:
+    enabled: true
+    username: sachin
+    password: sachin123
+  cors:
+    allowed-origins: http://localhost:3000
 
 logging:
   level:

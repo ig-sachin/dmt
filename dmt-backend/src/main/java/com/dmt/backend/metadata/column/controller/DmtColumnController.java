@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.column.controller;
 import com.dmt.backend.metadata.column.dto.ColumnRequest;
 import com.dmt.backend.metadata.column.dto.ColumnResponse;
 import com.dmt.backend.metadata.column.service.DmtColumnService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class DmtColumnController {
 
     @PostMapping
     public ColumnResponse create(
-            @RequestBody ColumnRequest request) {
+            @Valid @RequestBody ColumnRequest request) {
 
         return service.create(request);
     }

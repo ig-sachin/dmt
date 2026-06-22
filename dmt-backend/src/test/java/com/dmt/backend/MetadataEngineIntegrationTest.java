@@ -76,7 +76,7 @@ class MetadataEngineIntegrationTest extends AbstractDmtIntegrationTest {
     @Test
     void shouldResolveDropdownOptionsAndRejectBadDropdownRequests() {
 
-        createDefaultMetadata();
+        TestScreens screens = createDefaultMetadata();
         long dropdownId = createDropdown(
                 "CUSTOMER_STATUS_BY_ID",
                 "Customer Status By ID",
@@ -94,6 +94,24 @@ class MetadataEngineIntegrationTest extends AbstractDmtIntegrationTest {
                 true,
                 1
         );
+
+        // Create a column in the CUSTOMER screen that references this dropdown
+        post("/api/columns", mutableMap(
+                "screenId", screens.customerScreenId(),
+                "columnName", "CUSTOMER_STATUS_ID",
+                "displayName", "Customer Status",
+                "dataType", "NUMBER",
+                "fieldType", "DROPDOWN",
+                "visible", true,
+                "editable", true,
+                "mandatory", true,
+                "displayOrder", 99,
+                "width", 150,
+                "alignment", "LEFT",
+                "placeHolder", "",
+                "maxLength", 100,
+                "dropdownCode", "CUSTOMER_STATUS_BY_ID"
+        ), Map.class);
 
         List<Map<String, Object>> options =
                 get("/api/dropdowns/CUSTOMER_STATUS_BY_ID/options?CUSTOMER_ID=1", List.class);
@@ -145,6 +163,65 @@ class MetadataEngineIntegrationTest extends AbstractDmtIntegrationTest {
         assertThat(byRecord)
                 .extracting(audit -> audit.get("operation"))
                 .contains("INSERT", "UPDATE", "DELETE");
+    }
+
+    @Test
+    void shouldRejectInsertServerSideWhenMinLengthValidationFails() {
+
+        TestScreens screens = createDefaultMetadata();
+        long customerNameColumnId =
+                findColumnId(screens.customerScreenId(), "CUSTOMER_NAME");
+
+        createValidation(
+                customerNameColumnId,
+                "MIN_LENGTH",
+                "5",
+                "Customer name must be at least 5 characters"
+        );
+
+        // This payload would also be rejected by a frontend form built from
+        // /api/forms/CUSTOMER, but here we call /api/data/CUSTOMER directly to
+        // prove the rule is enforced server-side too, not only in the form schema.
+        ResponseEntity<Map> response =
+                exchangeRaw(
+                        HttpMethod.POST,
+                        "/api/data/CUSTOMER",
+                        Map.of(
+                                "CUSTOMER_ID", 9500,
+                                "CUSTOMER_NAME", "Al",
+                                "STATUS", "ACTIVE"
+                        )
+                );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().get("message").toString())
+                .contains("Customer name must be at least 5 characters");
+        assertThat(countRows("CUSTOMER_MASTER", "CUSTOMER_ID", 9500)).isZero();
+    }
+
+    @Test
+    void shouldAllowInsertWhenMinLengthValidationPasses() {
+
+        TestScreens screens = createDefaultMetadata();
+        long customerNameColumnId =
+                findColumnId(screens.customerScreenId(), "CUSTOMER_NAME");
+
+        createValidation(
+                customerNameColumnId,
+                "MIN_LENGTH",
+                "5",
+                "Customer name must be at least 5 characters"
+        );
+
+        Map<String, Object> response =
+                post("/api/data/CUSTOMER", Map.of(
+                        "CUSTOMER_ID", 9501,
+                        "CUSTOMER_NAME", "Alexandra",
+                        "STATUS", "ACTIVE"
+                ), Map.class);
+
+        assertThat(response.get("success")).isEqualTo(true);
+        assertThat(countRows("CUSTOMER_MASTER", "CUSTOMER_ID", 9501)).isEqualTo(1);
     }
 
     private long findColumnId(

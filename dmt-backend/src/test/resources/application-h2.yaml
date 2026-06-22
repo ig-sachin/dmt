@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=Oracle;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  flyway:
+    enabled: false
+
+jwt:
+  secret: testSecretKeyForDmtIntegrationTests123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
+  expiration: 86400000
+
+app:
+  bootstrap-admin:
+    enabled: true
+    username: sachin
+    password: sachin123
+  cors:
+    allowed-origins: http://localhost:3000
+
+logging:
+  level:
+    com.dmt.backend: INFO
+    org.hibernate.SQL: DEBUG

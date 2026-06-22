@@ -6,21 +6,28 @@ import com.dmt.backend.auth.dto.RegisterRequest;
 import com.dmt.backend.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
+    /**
+     * Account creation is an admin operation, not public self-registration -
+     * anyone who could self-register could otherwise grant themselves screen
+     * access or remap procedures once logged in. @PreAuthorize here is a second,
+     * independent check on top of the /api/users/** matcher in SecurityConfig.
+     */
+    @PostMapping("/api/users")
+    @PreAuthorize("hasRole('ADMIN')")
     public String register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
-    @PostMapping("/login")
+    @PostMapping("/auth/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }

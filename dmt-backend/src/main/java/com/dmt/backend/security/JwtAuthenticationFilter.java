@@ -49,6 +49,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails =
                         userDetailsService.loadUserByUsername(username);
 
+                if (!userDetails.isEnabled()) {
+
+                    log.warn(
+                            "JWT authentication rejected username={} uri={} reason=account_disabled",
+                            username,
+                            request.getRequestURI()
+                    );
+                    SecurityContextHolder.clearContext();
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
                 if (jwtService.isValid(token, userDetails.getUsername())) {
 
                     UsernamePasswordAuthenticationToken authentication =
@@ -78,6 +90,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     "Invalid JWT rejected uri={} reason={}",
                     request.getRequestURI(),
                     exception.getMessage()
+            );
+            SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        } catch (Exception exception) {
+            log.error(
+                    "Unexpected error resolving authentication uri={} message={}",
+                    request.getRequestURI(),
+                    exception.getMessage(),
+                    exception
             );
             SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

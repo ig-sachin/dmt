@@ -1,7 +1,6 @@
 package com.dmt.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -123,19 +122,5 @@ class CrudIntegrationTest extends AbstractDmtIntegrationTest {
         assertThat(deniedDelete.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(deniedDelete.getBody().get("message").toString())
                 .contains("Access denied for screen EMPLOYEE");
-    }
-
-    private ResponseEntity<Map> exchangeRawWithToken(
-            String bearerToken,
-            HttpMethod method,
-            String path,
-            Object body) {
-
-        return restTemplate.exchange(
-                url(path),
-                method,
-                new HttpEntity<>(body, headers(bearerToken)),
-                Map.class
-        );
     }
 }

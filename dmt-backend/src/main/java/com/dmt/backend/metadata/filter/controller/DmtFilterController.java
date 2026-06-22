@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.filter.controller;
 import com.dmt.backend.metadata.filter.dto.FilterRequest;
 import com.dmt.backend.metadata.filter.dto.FilterResponse;
 import com.dmt.backend.metadata.filter.service.DmtFilterService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class DmtFilterController {
 
     @PostMapping
     public FilterResponse create(
-            @RequestBody FilterRequest request) {
+            @Valid @RequestBody FilterRequest request) {
 
         return service.create(request);
     }

@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.validation.controller;
 import com.dmt.backend.metadata.validation.dto.ValidationRequest;
 import com.dmt.backend.metadata.validation.dto.ValidationResponse;
 import com.dmt.backend.metadata.validation.service.ValidationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class ValidationController {
 
     @PostMapping
     public ValidationResponse create(
-            @RequestBody ValidationRequest request) {
+            @Valid @RequestBody ValidationRequest request) {
 
         return service.create(request);
     }

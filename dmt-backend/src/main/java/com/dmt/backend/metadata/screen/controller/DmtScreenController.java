@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.screen.controller;
 import com.dmt.backend.metadata.screen.dto.ScreenRequest;
 import com.dmt.backend.metadata.screen.dto.ScreenResponse;
 import com.dmt.backend.metadata.screen.service.DmtScreenService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class DmtScreenController {
 
     @PostMapping
     public ScreenResponse create(
-            @RequestBody ScreenRequest request) {
+            @Valid @RequestBody ScreenRequest request) {
 
         return service.create(request);
     }
@@ -40,5 +41,12 @@ public class DmtScreenController {
             @PathVariable Long id) {
 
         service.delete(id);
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public void hardDelete(
+            @PathVariable Long id) {
+
+        service.hardDelete(id);
     }
 }

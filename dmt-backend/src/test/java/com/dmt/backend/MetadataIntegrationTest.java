@@ -44,6 +44,7 @@ class MetadataIntegrationTest extends AbstractDmtIntegrationTest {
                 "defaultPageSize", 10,
                 "defaultSortColumn", "CUSTOMER_ID",
                 "defaultSortDirection", "ASC",
+                "primaryKeyColumn", "CUSTOMER_ID",
                 "active", true
         ));
 

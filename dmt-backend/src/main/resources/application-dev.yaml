@@ -11,7 +11,7 @@ spring:
   jpa:
     defer-datasource-initialization: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
 
   flyway:
@@ -22,6 +22,8 @@ app:
     enabled: true
     username: sachin
     password: sachin123
+  cors:
+    allowed-origins: http://localhost:3000
 
 jwt:
   secret: mySuperSecretKeyForDmtDevelopmentOnly123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ

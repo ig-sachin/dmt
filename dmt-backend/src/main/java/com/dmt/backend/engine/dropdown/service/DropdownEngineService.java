@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ public class DropdownEngineService {
     private final ScreenAuthorizationService authorizationService;
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
+    @Transactional
     public List<DropdownOptionResponse> getOptions(
             String dropdownCode,
             Map<String, String> requestParams) {

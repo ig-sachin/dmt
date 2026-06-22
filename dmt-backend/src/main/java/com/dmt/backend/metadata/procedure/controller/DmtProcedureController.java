@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.procedure.controller;
 import com.dmt.backend.metadata.procedure.dto.ProcedureRequest;
 import com.dmt.backend.metadata.procedure.dto.ProcedureResponse;
 import com.dmt.backend.metadata.procedure.service.DmtProcedureService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class DmtProcedureController {
 
     @PostMapping
     public ProcedureResponse create(
-            @RequestBody ProcedureRequest request) {
+            @Valid @RequestBody ProcedureRequest request) {
 
         return service.create(request);
     }

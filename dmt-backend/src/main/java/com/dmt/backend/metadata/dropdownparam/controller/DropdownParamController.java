@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.dropdownparam.controller;
 import com.dmt.backend.metadata.dropdownparam.dto.DropdownParamRequest;
 import com.dmt.backend.metadata.dropdownparam.dto.DropdownParamResponse;
 import com.dmt.backend.metadata.dropdownparam.service.DropdownParamService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class DropdownParamController {
 
     @PostMapping
     public DropdownParamResponse create(
-            @RequestBody DropdownParamRequest request) {
+            @Valid @RequestBody DropdownParamRequest request) {
 
         return service.create(request);
     }

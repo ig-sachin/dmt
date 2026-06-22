@@ -1,5 +1,8 @@
 package com.dmt.backend;
 
+import com.dmt.backend.common.exception.ApiException;
+import com.dmt.backend.metadata.screen.entity.DmtScreen;
+import com.dmt.backend.metadata.screen.repository.DmtScreenRepository;
 import com.dmt.backend.metadata.screenrole.entity.DmtScreenRole;
 import com.dmt.backend.metadata.screenrole.entity.PermissionType;
 import com.dmt.backend.metadata.screenrole.repository.DmtScreenRoleRepository;
@@ -15,8 +18,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,17 +31,32 @@ class ScreenAuthorizationServiceTest {
     @Mock
     private DmtScreenRoleRepository repository;
 
+    @Mock
+    private DmtScreenRepository screenRepository;
+
     @AfterEach
     void tearDown() {
 
         SecurityContextHolder.clearContext();
     }
 
+    private void stubActiveScreen(String screenCode) {
+
+        DmtScreen screen = new DmtScreen();
+        screen.setScreenCode(screenCode);
+        screen.setActive(true);
+
+        lenient().when(screenRepository.findByScreenCode(screenCode))
+                .thenReturn(Optional.of(screen));
+    }
+
     @Test
     void shouldAllowUserWhenAnyRoleMatchesScreenRoleMetadata() {
 
         ScreenAuthorizationService service =
-                new ScreenAuthorizationService(repository);
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        stubActiveScreen("CUSTOMER");
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
@@ -55,7 +76,9 @@ class ScreenAuthorizationServiceTest {
     void shouldRejectUserWhenNoRoleMatchesScreenRoleMetadata() {
 
         ScreenAuthorizationService service =
-                new ScreenAuthorizationService(repository);
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        stubActiveScreen("EMPLOYEE");
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
@@ -77,7 +100,9 @@ class ScreenAuthorizationServiceTest {
     void shouldRejectWhenNoAuthenticationExists() {
 
         ScreenAuthorizationService service =
-                new ScreenAuthorizationService(repository);
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        stubActiveScreen("CUSTOMER");
 
         assertThatThrownBy(() -> service.authorize("CUSTOMER", PermissionType.VIEW))
                 .isInstanceOf(AccessDeniedException.class)
@@ -88,7 +113,9 @@ class ScreenAuthorizationServiceTest {
     void shouldAllowViewButRejectDeleteForReadOnlyRole() {
 
         ScreenAuthorizationService service =
-                new ScreenAuthorizationService(repository);
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        stubActiveScreen("CUSTOMER");
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
@@ -112,7 +139,9 @@ class ScreenAuthorizationServiceTest {
     void shouldAllowWhenAnyOfTheUsersMultipleRolesPermitsTheOperation() {
 
         ScreenAuthorizationService service =
-                new ScreenAuthorizationService(repository);
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        stubActiveScreen("CUSTOMER");
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
@@ -134,6 +163,46 @@ class ScreenAuthorizationServiceTest {
 
         assertThatThrownBy(() -> service.authorize("CUSTOMER", PermissionType.DELETE))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void shouldRejectAnyOperationOnADisabledScreenRegardlessOfRole() {
+
+        ScreenAuthorizationService service =
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        DmtScreen disabledScreen = new DmtScreen();
+        disabledScreen.setScreenCode("CUSTOMER");
+        disabledScreen.setActive(false);
+
+        when(screenRepository.findByScreenCode("CUSTOMER"))
+                .thenReturn(Optional.of(disabledScreen));
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "sachin",
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                )
+        );
+
+        assertThatThrownBy(() -> service.authorize("CUSTOMER", PermissionType.VIEW))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("Screen not found");
+    }
+
+    @Test
+    void shouldRejectWhenScreenDoesNotExist() {
+
+        ScreenAuthorizationService service =
+                new ScreenAuthorizationService(repository, screenRepository);
+
+        when(screenRepository.findByScreenCode("UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.authorize("UNKNOWN", PermissionType.VIEW))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("Screen not found");
     }
 
     private DmtScreenRole screenRole(

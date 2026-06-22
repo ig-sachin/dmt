@@ -27,6 +27,7 @@ public class GenericCrudService {
     private final ScreenAuthorizationService authorizationService;
     private final DmtScreenRepository screenRepository;
     private final AuditService auditService;
+    private final FieldValidationService fieldValidationService;
 
     public ProcedureExecutionResponse insert(
             String screenCode,
@@ -50,6 +51,12 @@ public class GenericCrudService {
         authorizationService.authorize(screenCode, mapPermissionType(opType));
         log.info("Generic CRUD authorization successful operationType={} screenCode={}", opType, screenCode);
         log.info("Generic CRUD requested operationType={} screenCode={} valueKeys={}", opType, screenCode, values == null ? null : values.keySet());
+
+        // DELETE payloads are typically just the primary key, not the full row, so
+        // field-level rules (REQUIRED on every mandatory column, etc.) don't apply.
+        if (opType == OperationType.INSERT || opType == OperationType.UPDATE) {
+            fieldValidationService.validate(screenCode, values);
+        }
 
         ProcedureExecutionResponse response = procedureEngineService.execute(
                 new ProcedureExecutionRequest(screenCode, opType, values)

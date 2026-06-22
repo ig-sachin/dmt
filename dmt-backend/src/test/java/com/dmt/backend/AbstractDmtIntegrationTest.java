@@ -978,6 +978,7 @@ abstract class AbstractDmtIntegrationTest {
                 "defaultPageSize", 10,
                 "defaultSortColumn", "CUSTOMER_ID",
                 "defaultSortDirection", "ASC",
+                "primaryKeyColumn", "CUSTOMER_ID",
                 "active", true
         ));
 
@@ -1042,11 +1043,15 @@ abstract class AbstractDmtIntegrationTest {
             String username,
             String password) {
 
-        restTemplate.postForEntity(
-                url("/auth/register"),
-                Map.of(
-                        "username", username,
-                        "password", password
+        restTemplate.exchange(
+                url("/api/users"),
+                HttpMethod.POST,
+                new HttpEntity<>(
+                        Map.of(
+                                "username", username,
+                                "password", password
+                        ),
+                        headers()
                 ),
                 String.class
         );
@@ -1078,6 +1083,33 @@ abstract class AbstractDmtIntegrationTest {
             Class<T> responseType) {
 
         return exchange(HttpMethod.POST, path, body, responseType);
+    }
+
+    protected ResponseEntity<Map> exchangeRaw(
+            HttpMethod method,
+            String path,
+            Object body) {
+
+        return restTemplate.exchange(
+                url(path),
+                method,
+                new HttpEntity<>(body, headers()),
+                Map.class
+        );
+    }
+
+    protected ResponseEntity<Map> exchangeRawWithToken(
+            String bearerToken,
+            HttpMethod method,
+            String path,
+            Object body) {
+
+        return restTemplate.exchange(
+                url(path),
+                method,
+                new HttpEntity<>(body, headers(bearerToken)),
+                Map.class
+        );
     }
 
     protected <T> T exchange(

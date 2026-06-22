@@ -3,6 +3,7 @@ package com.dmt.backend.metadata.screenrole.controller;
 import com.dmt.backend.metadata.screenrole.dto.ScreenRoleRequest;
 import com.dmt.backend.metadata.screenrole.dto.ScreenRoleResponse;
 import com.dmt.backend.metadata.screenrole.service.ScreenRoleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +18,16 @@ public class ScreenRoleController {
 
     @PostMapping
     public ScreenRoleResponse create(
-            @RequestBody ScreenRoleRequest request) {
+            @Valid @RequestBody ScreenRoleRequest request) {
 
         return service.create(request);
     }
 
+    /**
+     * Intentionally not @Valid - this is a partial update (only non-null fields are
+     * applied), so requiring roleName/screenId on every PUT would break updates that
+     * only change permission flags.
+     */
     @PutMapping("/{id}")
     public ScreenRoleResponse update(
             @PathVariable Long id,
